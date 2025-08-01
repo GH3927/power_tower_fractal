@@ -145,7 +145,7 @@ class FractalWindow(QMainWindow):
     
         new_spacing = self.current_spacing / zoom_factor
     
-        min_spacing = 1e-7
+        min_spacing = 1e-15
         max_spacing = 100.0
         if new_spacing < min_spacing or new_spacing > max_spacing:
             return
