@@ -1,9 +1,9 @@
 # Power Fractal Explorer
 
-PyQt6로 만든 파워 프랙탈 탐색기 GUI 앱입니다.
+A GUI application for exploring power fractals built with PyQt6.
 
-## 실행법
+## How to Run
 
 ```bash
 pip install -r requirements.txt
-python fractal_app.py
+python power_fractal_app.py
