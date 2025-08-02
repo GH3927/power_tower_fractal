@@ -34,11 +34,17 @@ class FractalWindow(QMainWindow):
         self.center_y_input = QLineEdit("0.0")
         self.threshold_input = QLineEdit("1e40")
 
+        # 입력창 너비 설정 (픽셀 단위)
+        field_width = 80  # 너비 조정: 필요시 늘리거나 줄일 수 있음
+        for field in [self.resolution_input, self.spacing_input,
+                      self.center_x_input, self.center_y_input, self.threshold_input]:
+            field.setFixedWidth(field_width)
+
         # spacing 입력창의 표시 형식 개선
         self.spacing_input.setValidator(QDoubleValidator(1e-20, 100.0, 20))  # 매우 작은 값 허용
         
         # 입력값 검증을 강화
-        self.resolution_input.setValidator(QIntValidator(1, 10000))  # 해상도 범위 제한
+        self.resolution_input.setValidator(QIntValidator(1, 10000))
         self.center_x_input.setValidator(QDoubleValidator(-1000, 1000, 20))
         self.center_y_input.setValidator(QDoubleValidator(-1000, 1000, 20))
         self.threshold_input.setValidator(QDoubleValidator(1e-10, 1e10, 20))
@@ -69,7 +75,7 @@ class FractalWindow(QMainWindow):
         # mouse event
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.image_label.setFixedSize(600, 600)  # 고정 크기 추가
+        self.image_label.setFixedSize(800, 800)  # 고정 크기 추가
         self.image_label.setMouseTracking(True)
     
         # 이벤트 핸들러 연결 (update_coordinates는 mouse_move_event 내부에서 호출되므로 삭제)
