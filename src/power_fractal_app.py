@@ -33,11 +33,12 @@ class FractalWindow(QMainWindow):
         self.center_x_input = QLineEdit("0.0")
         self.center_y_input = QLineEdit("0.0")
         self.threshold_input = QLineEdit("1e40")
+        self.max_iter_input = QLineEdit("50")
 
         # 입력창 너비 설정 (픽셀 단위)
-        field_width = 80  # 너비 조정: 필요시 늘리거나 줄일 수 있음
-        for field in [self.resolution_input, self.spacing_input,
-                      self.center_x_input, self.center_y_input, self.threshold_input]:
+        field_width = 60  # 너비 조정: 필요시 늘리거나 줄일 수 있음
+        for field in [self.resolution_input, self.spacing_input, self.center_x_input,
+                      self.center_y_input, self.threshold_input, self.max_iter_input]:
             field.setFixedWidth(field_width)
 
         # spacing 입력창의 표시 형식 개선
@@ -48,6 +49,7 @@ class FractalWindow(QMainWindow):
         self.center_x_input.setValidator(QDoubleValidator(-1000, 1000, 20))
         self.center_y_input.setValidator(QDoubleValidator(-1000, 1000, 20))
         self.threshold_input.setValidator(QDoubleValidator(1e-10, 1e10, 20))
+        self.max_iter_input.setValidator(QIntValidator(1, 10000))
 
         input_layout.addWidget(QLabel("Resolution:"))
         input_layout.addWidget(self.resolution_input)
@@ -57,9 +59,11 @@ class FractalWindow(QMainWindow):
         input_layout.addWidget(self.center_x_input)
         input_layout.addWidget(QLabel("Center Y:"))
         input_layout.addWidget(self.center_y_input)
-
         input_layout.addWidget(QLabel("Threshold:"))
         input_layout.addWidget(self.threshold_input)
+        input_layout.addWidget(QLabel("Max Iter:"))
+        input_layout.addWidget(self.max_iter_input)
+
 
         main_layout.addLayout(input_layout)
 
@@ -220,6 +224,8 @@ class FractalWindow(QMainWindow):
             self.current_center_y = float(self.center_y_input.text())
             self.current_resolution = int(self.resolution_input.text())
             threshold = float(self.threshold_input.text())
+            max_iter = int(self.max_iter_input.text())
+
         except ValueError:
             self.image_label.setText("Invalid input values")
             return
@@ -229,8 +235,10 @@ class FractalWindow(QMainWindow):
             self.current_spacing,
             self.current_center_x,
             self.current_center_y,
-            threshold
+            threshold=threshold,
+            max_iter=max_iter
         )
+
         height, width = fractal.shape
         image = QImage(width, height, QImage.Format.Format_Grayscale8)
         for y in range(height):
