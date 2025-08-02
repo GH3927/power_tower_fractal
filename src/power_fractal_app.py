@@ -4,7 +4,6 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHB
 from PyQt6.QtWidgets import QFileDialog, QProgressBar  
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from power_fractal import compute_power_fractal
 from PyQt6.QtGui import QDoubleValidator, QIntValidator
 
 class FractalWorker(QThread):
