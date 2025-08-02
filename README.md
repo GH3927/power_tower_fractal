@@ -17,7 +17,7 @@
 ## 📸 Screenshots
 
 ### Main Interface
-![Main UI](example/ui.png)
+![Main UI](example/ui_image.png)
 
 ### Zoomed-in Fractal
 ![Zoomed Fractal](example/fractal_snapshot.png)
