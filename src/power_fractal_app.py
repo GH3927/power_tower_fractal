@@ -29,14 +29,13 @@ class FractalWindow(QMainWindow):
         input_layout = QHBoxLayout()
         
         self.resolution_input = QLineEdit("200")
-        self.spacing_input = QLineEdit("0.005")
+        self.spacing_input = QLineEdit("0.05")
         self.center_x_input = QLineEdit("0.0")
         self.center_y_input = QLineEdit("0.0")
-        self.threshold_input = QLineEdit("100.0")
+        self.threshold_input = QLineEdit("1e40")
 
         # spacing 입력창의 표시 형식 개선
         self.spacing_input.setValidator(QDoubleValidator(1e-20, 100.0, 20))  # 매우 작은 값 허용
-        self.spacing_input.setText("0.005")
         
         # 입력값 검증을 강화
         self.resolution_input.setValidator(QIntValidator(1, 10000))  # 해상도 범위 제한
