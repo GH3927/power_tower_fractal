@@ -7,8 +7,9 @@
 ## ✨ Features
 
 - Interactive GUI with zoom & pan support  
-- Real-time rendering with progress updates  
+- Real-time fractal rendering with progress updates  
 - Save fractal images as PNG  
+- Lightweight and easy to use  
 - Built with PyQt6 and NumPy
 
 ---
@@ -20,7 +21,8 @@ If running from source:
 - Python 3.11  
 - PyQt6  
 - NumPy  
-- (See `requirements.txt`)
+
+> 📄 See `requirements.txt` for exact versions.
 
 ---
 
@@ -28,15 +30,45 @@ If running from source:
 
 ### 🔧 Option 1: Run from source (Python required)
 
-```bash
-conda create -n tetration python==3.11
-conda activate tetration
-pip install -r requirements.txt
-python src/power_fractal_app.py
+1. Set up the environment:
+
+    ```bash
+    conda create -n tetration python=3.11
+    conda activate tetration
+    pip install -r requirements.txt
+    ```
+
+2. Run the application:
+
+    ```bash
+    python src/power_fractal_app.py
+    ```
 
 ---
 
-### 🔧 Option 2: Run from source (no Python required)
+### 🧊 Option 2: Run the executable (no Python required)
 
-Simply run the following file
-power_fractal_app.exe
+1. Download or locate the built executable file:
+
+    ```
+    power_fractal_app.exe
+    ```
+
+2. Double-click to launch the app — no installation required.
+
+> ✅ This executable was created using PyInstaller and includes all necessary dependencies.
+
+---
+
+## 🖼 Screenshots
+
+*(Add screenshots of the app interface here if available)*
+
+---
+
+## 🔧 Building the Executable (Optional)
+
+To build your own standalone executable using PyInstaller:
+
+```bash
+pyinstaller src/power_fractal_app.py --onefile --noconsole
