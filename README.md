@@ -1,13 +1,12 @@
 # Power Fractal Explorer
 
-**Power Fractal Explorer** is a graphical application for visualizing and exploring power-based fractals, such as variations of the Mandelbrot set, using PyQt6 for the interface. It offers interactive zooming, color customization, and real-time rendering for mathematical visualization enthusiasts.
+**Power Fractal Explorer** is a graphical application for visualizing and exploring power tower fractals, using PyQt6 for the interface. It offers interactive zooming and real-time rendering for mathematical visualization enthusiasts.
 
 ---
 
 ## ✨ Features
 
 - Interactive GUI with zoom & pan support  
-- Customizable fractal parameters (power, iterations, etc.)  
 - Real-time rendering with progress updates  
 - Save fractal images as PNG  
 - Built with PyQt6 and NumPy
