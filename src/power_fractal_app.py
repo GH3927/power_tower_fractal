@@ -1,11 +1,49 @@
 import sys
 import numpy as np
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton
-from PyQt6.QtWidgets import QFileDialog
+from PyQt6.QtWidgets import QFileDialog, QProgressBar  
 from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtCore import Qt, QRect
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from power_fractal import compute_power_fractal
 from PyQt6.QtGui import QDoubleValidator, QIntValidator
+
+class FractalWorker(QThread):
+    progress_changed = pyqtSignal(int)
+    result_ready = pyqtSignal(np.ndarray)
+
+    def __init__(self, resolution, spacing, center_x, center_y, threshold, max_iter):
+        super().__init__()
+        self.resolution = resolution
+        self.spacing = spacing
+        self.center_x = center_x
+        self.center_y = center_y
+        self.threshold = threshold
+        self.max_iter = max_iter
+
+    def run(self):
+        x = np.linspace(self.center_x - self.resolution * self.spacing / 2,
+                        self.center_x + self.resolution * self.spacing / 2,
+                        self.resolution, dtype=np.float64)
+        y = np.linspace(self.center_y - self.resolution * self.spacing / 2,
+                        self.center_y + self.resolution * self.spacing / 2,
+                        self.resolution, dtype=np.float64)
+        X, Y = np.meshgrid(x, y)
+        C = X + 1j * Y
+        Z = np.ones_like(C, dtype=np.complex128)
+        fractal = np.zeros((self.resolution, self.resolution), dtype=np.float64)
+
+        for i in range(self.max_iter):
+            Z = np.where(np.abs(Z) < self.threshold, C ** Z, Z)
+            mask = (np.abs(Z) > self.threshold) & (fractal == 0)
+            fractal[mask] = 1
+            mask_nan_inf = (np.isnan(Z) | np.isinf(Z)) & (fractal == 0)
+            fractal[mask_nan_inf] = 1
+            self.progress_changed.emit(int((i + 1) / self.max_iter * 100))
+
+            if np.all(fractal != 0):
+                break
+
+        self.result_ready.emit(fractal)
 
 class FractalWindow(QMainWindow):
     def __init__(self):
@@ -16,6 +54,7 @@ class FractalWindow(QMainWindow):
         self.current_center_y = 0.0
         self.current_resolution = 200
         self.zoom_scale = 1.0
+        self.is_rendering = False  # 렌더링 중인지 플래그
         self.init_ui()
 
     def init_ui(self):
@@ -71,7 +110,14 @@ class FractalWindow(QMainWindow):
         self.plot_button = QPushButton("Render Fractal")
         self.plot_button.clicked.connect(self.plot_fractal)
         main_layout.addWidget(self.plot_button)
-
+        
+        # Progress bar (Render Fractal 버튼 밑에 배치)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setEnabled(False)  # 시작 시 비활성화
+        main_layout.addWidget(self.progress_bar)
+        
         # Coordinate display
         self.coord_label = QLabel("X: 0.000, Y: 0.000")
         main_layout.addWidget(self.coord_label)
@@ -99,7 +145,7 @@ class FractalWindow(QMainWindow):
         main_layout.addWidget(self.save_button)
                 
         self.resolution_input.editingFinished.connect(self.adjust_spacing_for_resolution)
-        
+                
     def adjust_spacing_for_resolution(self):
         try:
             new_resolution = int(self.resolution_input.text())
@@ -148,7 +194,8 @@ class FractalWindow(QMainWindow):
             self.center_x_input.setText(str(self.current_center_x))
             self.center_y_input.setText(str(self.current_center_y))
     
-            self.plot_fractal()  # 드래그 중 실시간 렌더링
+            self.progress_bar.setEnabled(False)  # 드래그 중에는 progress bar 비활성화
+            self.plot_fractal()
 
     def mouse_wheel_event(self, event):
         if not hasattr(self, 'scaled_pixmap') or self.scaled_pixmap.isNull():
@@ -218,6 +265,12 @@ class FractalWindow(QMainWindow):
             self.coord_label.setText("X: -, Y: -")
 
     def plot_fractal(self):
+        if self.is_rendering:
+            return
+        # ...
+        self.is_rendering = True
+        self.plot_button.setEnabled(False)  # 렌더링 시작 시 비활성화
+            
         try:
             self.current_spacing = float(self.spacing_input.text())
             self.current_center_x = float(self.center_x_input.text())
@@ -225,20 +278,32 @@ class FractalWindow(QMainWindow):
             self.current_resolution = int(self.resolution_input.text())
             threshold = float(self.threshold_input.text())
             max_iter = int(self.max_iter_input.text())
-
         except ValueError:
             self.image_label.setText("Invalid input values")
             return
+        
+        self.is_rendering = True  # 시작 시 True 설정
     
-        fractal = compute_power_fractal(
+        self.progress_bar.setValue(0)
+        self.progress_bar.setEnabled(True)
+    
+        self.worker = FractalWorker(
             self.current_resolution,
             self.current_spacing,
             self.current_center_x,
             self.current_center_y,
-            threshold=threshold,
-            max_iter=max_iter
+            threshold,
+            max_iter
         )
+        self.worker.progress_changed.connect(self.progress_bar.setValue)
+        self.worker.result_ready.connect(self.display_fractal)
+        
+        # 작업 완료 시 is_rendering을 False로 바꿔주는 슬롯 연결
+        self.worker.finished.connect(self.on_render_finished)
+    
+        self.worker.start()
 
+    def display_fractal(self, fractal):
         height, width = fractal.shape
         image = QImage(width, height, QImage.Format.Format_Grayscale8)
         for y in range(height):
@@ -247,15 +312,20 @@ class FractalWindow(QMainWindow):
                 image.setPixel(x, y, value * 0x10101)
     
         self.current_pixmap = QPixmap.fromImage(image)
-    
-        # 여기서 scaled_pixmap을 별도로 저장
         self.scaled_pixmap = self.current_pixmap.scaled(
             self.image_label.width(), self.image_label.height(),
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.FastTransformation
         )
-    
         self.image_label.setPixmap(self.scaled_pixmap)
+    
+        # UI 상태 복원: 버튼 다시 활성화
+        self.plot_button.setEnabled(True)
+        self.progress_bar.setValue(100)
+        self.progress_bar.setEnabled(False)
+
+    def on_render_finished(self):
+        self.is_rendering = False
 
     def save_image(self):
         if not hasattr(self, 'current_pixmap') or self.current_pixmap.isNull():
