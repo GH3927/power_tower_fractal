@@ -188,7 +188,6 @@ class FractalWindow(QMainWindow):
             self.center_x_input.setText(str(self.current_center_x))
             self.center_y_input.setText(str(self.current_center_y))
     
-            self.progress_bar.setEnabled(False)  # 드래그 중에는 progress bar 비활성화
             self.plot_fractal()
 
     def mouse_wheel_event(self, event):
