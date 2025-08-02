@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton
-from PyQt6.QtWidgets import QFileDialog, QProgressBar  
+from PyQt6.QtWidgets import QFileDialog, QProgressBar, QSizePolicy 
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QDoubleValidator, QIntValidator
@@ -57,12 +57,13 @@ class FractalWindow(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
+        self.setFixedSize(720, 850)
+
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         central_widget.setLayout(main_layout)
-
         # Input fields
         input_layout = QHBoxLayout()
         
@@ -74,15 +75,12 @@ class FractalWindow(QMainWindow):
         self.max_iter_input = QLineEdit("50")
 
         # 입력창 너비 설정 (픽셀 단위)
-        field_width = 60  # 너비 조정: 필요시 늘리거나 줄일 수 있음
+        field_width = 60
         for field in [self.resolution_input, self.spacing_input, self.center_x_input,
                       self.center_y_input, self.threshold_input, self.max_iter_input]:
             field.setFixedWidth(field_width)
 
-        # spacing 입력창의 표시 형식 개선
-        self.spacing_input.setValidator(QDoubleValidator(1e-20, 100.0, 20))  # 매우 작은 값 허용
-        
-        # 입력값 검증을 강화
+        self.spacing_input.setValidator(QDoubleValidator(1e-20, 100.0, 20))
         self.resolution_input.setValidator(QIntValidator(1, 10000))
         self.center_x_input.setValidator(QDoubleValidator(-1000, 1000, 20))
         self.center_y_input.setValidator(QDoubleValidator(-1000, 1000, 20))
@@ -102,7 +100,6 @@ class FractalWindow(QMainWindow):
         input_layout.addWidget(QLabel("Max Iter:"))
         input_layout.addWidget(self.max_iter_input)
 
-
         main_layout.addLayout(input_layout)
 
         # Plot button
@@ -114,7 +111,7 @@ class FractalWindow(QMainWindow):
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
-        self.progress_bar.setEnabled(False)  # 시작 시 비활성화
+        self.progress_bar.setEnabled(False)
         main_layout.addWidget(self.progress_bar)
         
         # Coordinate display
@@ -124,11 +121,9 @@ class FractalWindow(QMainWindow):
         # mouse event
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.image_label.setFixedSize(800, 800)  # 고정 크기 추가
+        self.image_label.setFixedSize(700, 700)
         self.image_label.setMouseTracking(True)
     
-        # 이벤트 핸들러 연결 (update_coordinates는 mouse_move_event 내부에서 호출되므로 삭제)
-        # self.image_label.mouseMoveEvent = self.update_coordinates  # 삭제
         self.image_label.mousePressEvent = self.mouse_press_event
         self.image_label.mouseReleaseEvent = self.mouse_release_event
         self.image_label.mouseMoveEvent = self.mouse_move_event
@@ -144,7 +139,7 @@ class FractalWindow(QMainWindow):
         main_layout.addWidget(self.save_button)
                 
         self.resolution_input.editingFinished.connect(self.adjust_spacing_for_resolution)
-                
+        
     def adjust_spacing_for_resolution(self):
         try:
             new_resolution = int(self.resolution_input.text())
