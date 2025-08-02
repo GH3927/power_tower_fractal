@@ -41,6 +41,10 @@ class FractalWindow(QMainWindow):
         input_layout.addWidget(QLabel("Center Y:"))
         input_layout.addWidget(self.center_y_input)
 
+        self.threshold_input = QLineEdit("100.0")
+        input_layout.addWidget(QLabel("Threshold:"))
+        input_layout.addWidget(self.threshold_input)
+
         main_layout.addLayout(input_layout)
 
         # Plot button
@@ -195,6 +199,7 @@ class FractalWindow(QMainWindow):
             self.current_center_x = float(self.center_x_input.text())
             self.current_center_y = float(self.center_y_input.text())
             self.current_resolution = int(self.resolution_input.text())
+            threshold = float(self.threshold_input.text())
         except ValueError:
             self.image_label.setText("Invalid input values")
             return
@@ -203,9 +208,9 @@ class FractalWindow(QMainWindow):
             self.current_resolution,
             self.current_spacing,
             self.current_center_x,
-            self.current_center_y
+            self.current_center_y,
+            threshold
         )
-    
         height, width = fractal.shape
         image = QImage(width, height, QImage.Format.Format_Grayscale8)
         for y in range(height):
