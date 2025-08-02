@@ -60,12 +60,6 @@ If running from source:
 
 ---
 
-## 🖼 Screenshots
-
-*(Add screenshots of the app interface here if available)*
-
----
-
 ## 🔧 Building the Executable (Optional)
 
 To build your own standalone executable using PyInstaller:
