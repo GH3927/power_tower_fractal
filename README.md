@@ -14,6 +14,16 @@
 
 ---
 
+## 📸 Screenshots
+
+### Main Interface
+![Main UI](example/ui.png)
+
+### Zoomed-in Fractal
+![Zoomed Fractal](example/fractal_snapshot.png)
+
+---
+
 ## 📦 Requirements
 
 If running from source:
