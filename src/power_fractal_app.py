@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QFileDialog
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtCore import Qt, QRect
 from power_fractal import compute_power_fractal
+from PyQt6.QtGui import QDoubleValidator, QIntValidator
 
 class FractalWindow(QMainWindow):
     def __init__(self):
@@ -31,6 +32,17 @@ class FractalWindow(QMainWindow):
         self.spacing_input = QLineEdit("0.005")
         self.center_x_input = QLineEdit("0.0")
         self.center_y_input = QLineEdit("0.0")
+        self.threshold_input = QLineEdit("100.0")
+
+        # spacing 입력창의 표시 형식 개선
+        self.spacing_input.setValidator(QDoubleValidator(1e-20, 100.0, 20))  # 매우 작은 값 허용
+        self.spacing_input.setText("0.005")
+        
+        # 입력값 검증을 강화
+        self.resolution_input.setValidator(QIntValidator(1, 10000))  # 해상도 범위 제한
+        self.center_x_input.setValidator(QDoubleValidator(-1000, 1000, 20))
+        self.center_y_input.setValidator(QDoubleValidator(-1000, 1000, 20))
+        self.threshold_input.setValidator(QDoubleValidator(1e-10, 1e10, 20))
 
         input_layout.addWidget(QLabel("Resolution:"))
         input_layout.addWidget(self.resolution_input)
@@ -41,7 +53,6 @@ class FractalWindow(QMainWindow):
         input_layout.addWidget(QLabel("Center Y:"))
         input_layout.addWidget(self.center_y_input)
 
-        self.threshold_input = QLineEdit("100.0")
         input_layout.addWidget(QLabel("Threshold:"))
         input_layout.addWidget(self.threshold_input)
 
@@ -86,17 +97,19 @@ class FractalWindow(QMainWindow):
             if new_resolution <= 0:
                 raise ValueError
     
-            # 현재 시야 크기 유지: old_spacing * old_resolution = new_spacing * new_resolution
             current_view_size = self.current_spacing * self.current_resolution
             new_spacing = current_view_size / new_resolution
+    
+            # 최소 spacing 제한 완화
+            if new_spacing < 1e-20:
+                new_spacing = 1e-20
     
             self.current_resolution = new_resolution
             self.current_spacing = new_spacing
     
-            # 입력창 업데이트
-            self.spacing_input.setText(f"{self.current_spacing:.8f}")
+            # 입력창에 과학적 표기법으로 표시
+            self.spacing_input.setText(f"{self.current_spacing:.20e}")
     
-            # 이미지 다시 렌더링
             self.plot_fractal()
     
         except ValueError:
@@ -149,7 +162,8 @@ class FractalWindow(QMainWindow):
     
         new_spacing = self.current_spacing / zoom_factor
     
-        min_spacing = 1e-15
+        # 최소 spacing 제한 완화
+        min_spacing = 1e-20
         max_spacing = 100.0
         if new_spacing < min_spacing or new_spacing > max_spacing:
             return
@@ -165,9 +179,10 @@ class FractalWindow(QMainWindow):
     
         self.current_spacing = new_spacing
     
-        self.center_x_input.setText(f"{self.current_center_x:.8f}")
-        self.center_y_input.setText(f"{self.current_center_y:.8f}")
-        self.spacing_input.setText(f"{self.current_spacing:.8f}")
+        # 입력창에 과학적 표기법으로 표시
+        self.center_x_input.setText(f"{self.current_center_x:.20e}")
+        self.center_y_input.setText(f"{self.current_center_y:.20e}")
+        self.spacing_input.setText(f"{self.current_spacing:.20e}")
     
         self.plot_fractal()
 
