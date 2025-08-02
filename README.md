@@ -34,6 +34,8 @@ conda activate tetration
 pip install -r requirements.txt
 python src/power_fractal_app.py
 
+---
+
 ### 🔧 Option 2: Run from source (no Python required)
 
 Simply run the following file
