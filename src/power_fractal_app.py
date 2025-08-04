@@ -1,8 +1,8 @@
 import sys
 import math
 import numpy as np
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton
-from PyQt6.QtWidgets import QFileDialog, QProgressBar, QSizePolicy 
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox
+from PyQt6.QtWidgets import QFileDialog, QProgressBar
 from PyQt6.QtGui import QImage, QPixmap, QColor
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QDoubleValidator, QIntValidator
@@ -30,13 +30,12 @@ class FractalWorker(QThread):
         X, Y = np.meshgrid(x, y)
         C = X + 1j * Y
         Z = np.ones_like(C, dtype=np.complex128)
-        # fractal = np.zeros((self.resolution, self.resolution), dtype=np.float64)
         fractal = np.zeros((self.resolution, self.resolution), dtype=np.uint16)
 
         for i in range(self.max_iter):
             Z = np.where(np.abs(Z) < self.threshold, C ** Z, Z)
             mask = (np.abs(Z) > self.threshold) & (fractal == 0)
-            fractal[mask] = i + 1  # 반복 횟수를 저장
+            fractal[mask] = i + 1
             mask_nan_inf = (np.isnan(Z) | np.isinf(Z)) & (fractal == 0)
             fractal[mask_nan_inf] = i + 1
             self.progress_changed.emit(int((i + 1) / self.max_iter * 100))
@@ -55,7 +54,7 @@ class FractalWindow(QMainWindow):
         self.current_center_y = 0.0
         self.current_resolution = 200
         self.zoom_scale = 1.0
-        self.is_rendering = False  # 렌더링 중인지 플래그
+        self.is_rendering = False
         self.init_ui()
 
     def init_ui(self):
@@ -77,11 +76,6 @@ class FractalWindow(QMainWindow):
         self.center_y_input = QLineEdit("0.0")
         self.threshold_input = QLineEdit("1e40")
         self.max_iter_input = QLineEdit("50")
-
-        self.mod_amp_input = QLineEdit("90")
-        self.mod_freq_input = QLineEdit("3")
-        self.hue_offset_input = QLineEdit("60")
-        self.min_brightness_input = QLineEdit("150")
 
         self.spacing_input.setValidator(QDoubleValidator(1e-20, 100.0, 20))
         self.resolution_input.setValidator(QIntValidator(1, 10000))
@@ -105,23 +99,40 @@ class FractalWindow(QMainWindow):
 
         main_layout.addLayout(input_layout)
 
-        # HUE 조절
+        # Color parameters and mode selection layout
         color_param_layout = QHBoxLayout()
         
+        # Mode Selection
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItems(["Color", "Grayscale"])
+        self.mode_combo.currentTextChanged.connect(self.toggle_color_inputs)
+        color_param_layout.addWidget(QLabel("Mode:"))
+        color_param_layout.addWidget(self.mode_combo)
+
+        # Color specific inputs
+        self.mod_amp_label = QLabel("Mod Amp:")
+        self.mod_amp_input = QLineEdit("90")
+        self.mod_freq_label = QLabel("Mod Freq:")
+        self.mod_freq_input = QLineEdit("3")
+        self.hue_offset_label = QLabel("Hue Offset:")
+        self.hue_offset_input = QLineEdit("60")
+        self.min_brightness_label = QLabel("Min Bright:")
+        self.min_brightness_input = QLineEdit("150")
+
         self.mod_amp_input.setValidator(QDoubleValidator(-1000.0, 1000.0, 4))
         self.mod_freq_input.setValidator(QDoubleValidator(0.0, 100.0, 4))
         self.hue_offset_input.setValidator(QDoubleValidator(-360.0, 720.0, 4))
         self.min_brightness_input.setValidator(QIntValidator(0, 255))
-
-        color_param_layout.addWidget(QLabel("Mod Amp:"))
+        
+        color_param_layout.addWidget(self.mod_amp_label)
         color_param_layout.addWidget(self.mod_amp_input)
-        color_param_layout.addWidget(QLabel("Mod Freq:"))
+        color_param_layout.addWidget(self.mod_freq_label)
         color_param_layout.addWidget(self.mod_freq_input)
-        color_param_layout.addWidget(QLabel("Hue Offset:"))
+        color_param_layout.addWidget(self.hue_offset_label)
         color_param_layout.addWidget(self.hue_offset_input)
-        color_param_layout.addWidget(QLabel("Min Bright:"))
+        color_param_layout.addWidget(self.min_brightness_label)
         color_param_layout.addWidget(self.min_brightness_input)
-
+        
         main_layout.addLayout(color_param_layout)
 
         # Plot button
@@ -129,18 +140,15 @@ class FractalWindow(QMainWindow):
         self.plot_button.clicked.connect(self.plot_fractal)
         main_layout.addWidget(self.plot_button)
         
-        # Progress bar (Render Fractal 버튼 밑에 배치)
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setEnabled(False)
         main_layout.addWidget(self.progress_bar)
         
-        # Coordinate display
         self.coord_label = QLabel("X: 0.000, Y: 0.000")
         main_layout.addWidget(self.coord_label)
 
-        # mouse event
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.image_label.setFixedSize(700, 700)
@@ -155,13 +163,22 @@ class FractalWindow(QMainWindow):
         self.dragging = False
         self.last_mouse_pos = None
         
-        # 이미지 저장 버튼 추가
         self.save_button = QPushButton("Save Image")
         self.save_button.clicked.connect(self.save_image)
         main_layout.addWidget(self.save_button)
                 
         self.resolution_input.editingFinished.connect(self.adjust_spacing_for_resolution)
-        
+        self.toggle_color_inputs("Color") # Initial state
+
+    def toggle_color_inputs(self, mode):
+        is_color_mode = (mode == "Color")
+        self.mod_amp_label.setVisible(is_color_mode)
+        self.mod_amp_input.setVisible(is_color_mode)
+        self.mod_freq_label.setVisible(is_color_mode)
+        self.mod_freq_input.setVisible(is_color_mode)
+        self.hue_offset_label.setVisible(is_color_mode)
+        self.hue_offset_input.setVisible(is_color_mode)
+
     def adjust_spacing_for_resolution(self):
         try:
             new_resolution = int(self.resolution_input.text())
@@ -171,16 +188,13 @@ class FractalWindow(QMainWindow):
             current_view_size = self.current_spacing * self.current_resolution
             new_spacing = current_view_size / new_resolution
     
-            # 최소 spacing 제한 완화
             if new_spacing < 1e-20:
                 new_spacing = 1e-20
     
             self.current_resolution = new_resolution
             self.current_spacing = new_spacing
     
-            # 입력창에 과학적 표기법으로 표시
             self.spacing_input.setText(f"{self.current_spacing:.20e}")
-    
             self.plot_fractal()
     
         except ValueError:
@@ -200,11 +214,8 @@ class FractalWindow(QMainWindow):
         self.update_coordinates(event)
         if self.dragging and self.last_mouse_pos is not None:
             delta = event.position() - self.last_mouse_pos
-            dx = delta.x()
-            dy = delta.y()
-    
-            self.current_center_x -= dx * self.current_spacing
-            self.current_center_y += dy * self.current_spacing
+            self.current_center_x -= delta.x() * self.current_spacing
+            self.current_center_y += delta.y() * self.current_spacing
             self.last_mouse_pos = event.position()
     
             self.center_x_input.setText(str(self.current_center_x))
@@ -213,78 +224,58 @@ class FractalWindow(QMainWindow):
             self.plot_fractal()
 
     def mouse_wheel_event(self, event):
-        if not hasattr(self, 'scaled_pixmap') or self.scaled_pixmap.isNull():
-            return
+        if not hasattr(self, 'scaled_pixmap') or self.scaled_pixmap.isNull(): return
     
         pos = event.position()
-        x, y = pos.x(), pos.y()
-    
         pixmap_rect = self.scaled_pixmap.rect()
         pixmap_rect.moveCenter(self.image_label.rect().center())
     
-        if not pixmap_rect.contains(int(x), int(y)):
+        if not pixmap_rect.contains(int(pos.x()), int(pos.y())):
             rel_x, rel_y = 0.5, 0.5
         else:
-            rel_x = (x - pixmap_rect.left()) / pixmap_rect.width()
-            rel_y = (y - pixmap_rect.top()) / pixmap_rect.height()
+            rel_x = (pos.x() - pixmap_rect.left()) / pixmap_rect.width()
+            rel_y = (pos.y() - pixmap_rect.top()) / pixmap_rect.height()
     
-        angle = event.angleDelta().y()
-        zoom_factor = 1.1 if angle > 0 else 0.9
-    
+        zoom_factor = 1.1 if event.angleDelta().y() > 0 else 0.9
         new_spacing = self.current_spacing / zoom_factor
     
-        # 최소 spacing 제한 완화
-        min_spacing = 1e-20
-        max_spacing = 100.0
-        if new_spacing < min_spacing or new_spacing > max_spacing:
-            return
+        if not (1e-20 < new_spacing < 100.0): return
     
         fractal_x_before = self.current_center_x + (rel_x - 0.5) * self.current_resolution * self.current_spacing
         fractal_y_before = self.current_center_y - (rel_y - 0.5) * self.current_resolution * self.current_spacing
-    
         fractal_x_after = self.current_center_x + (rel_x - 0.5) * self.current_resolution * new_spacing
         fractal_y_after = self.current_center_y - (rel_y - 0.5) * self.current_resolution * new_spacing
     
         self.current_center_x += fractal_x_before - fractal_x_after
         self.current_center_y += fractal_y_before - fractal_y_after
-    
         self.current_spacing = new_spacing
     
-        # 입력창에 과학적 표기법으로 표시
         self.center_x_input.setText(f"{self.current_center_x:.20e}")
         self.center_y_input.setText(f"{self.current_center_y:.20e}")
         self.spacing_input.setText(f"{self.current_spacing:.20e}")
-    
         self.plot_fractal()
 
     def update_coordinates(self, event):
-        if not hasattr(self, 'scaled_pixmap') or self.scaled_pixmap.isNull():
-            return
-    
+        if not hasattr(self, 'scaled_pixmap') or self.scaled_pixmap.isNull(): return
+        
         pos = event.position()
-        x, y = pos.x(), pos.y()
-    
         label_rect = self.image_label.rect()
         pixmap_rect = self.scaled_pixmap.rect()
         pixmap_rect.moveCenter(label_rect.center())
     
-        if pixmap_rect.contains(int(x), int(y)):
-            rel_x = (x - pixmap_rect.left()) / pixmap_rect.width()
-            rel_y = (y - pixmap_rect.top()) / pixmap_rect.height()
-    
+        if pixmap_rect.contains(int(pos.x()), int(pos.y())):
+            rel_x = (pos.x() - pixmap_rect.left()) / pixmap_rect.width()
+            rel_y = (pos.y() - pixmap_rect.top()) / pixmap_rect.height()
             fractal_x = self.current_center_x + (rel_x - 0.5) * self.current_resolution * self.current_spacing
             fractal_y = self.current_center_y - (rel_y - 0.5) * self.current_resolution * self.current_spacing
-    
             self.coord_label.setText(f"X: {fractal_x:.6f}, Y: {fractal_y:.6f}")
         else:
             self.coord_label.setText("X: -, Y: -")
 
     def plot_fractal(self):
-        if self.is_rendering:
-            return
-        # ...
+        if self.is_rendering: return
         self.is_rendering = True
-        self.plot_button.setEnabled(False)  # 렌더링 시작 시 비활성화
+        self.plot_button.setEnabled(False)
             
         try:
             self.current_spacing = float(self.spacing_input.text())
@@ -295,69 +286,67 @@ class FractalWindow(QMainWindow):
             max_iter = int(self.max_iter_input.text())
         except ValueError:
             self.image_label.setText("Invalid input values")
+            self.is_rendering = False
+            self.plot_button.setEnabled(True)
             return
         
-        self.is_rendering = True  # 시작 시 True 설정
-    
         self.progress_bar.setValue(0)
         self.progress_bar.setEnabled(True)
     
         self.worker = FractalWorker(
-            self.current_resolution,
-            self.current_spacing,
-            self.current_center_x,
-            self.current_center_y,
-            threshold,
-            max_iter
+            self.current_resolution, self.current_spacing, self.current_center_x,
+            self.current_center_y, threshold, max_iter
         )
         self.worker.progress_changed.connect(self.progress_bar.setValue)
         self.worker.result_ready.connect(self.display_fractal)
-        
-        # 작업 완료 시 is_rendering을 False로 바꿔주는 슬롯 연결
         self.worker.finished.connect(self.on_render_finished)
-    
         self.worker.start()
 
     def display_fractal(self, fractal):
+        mode = self.mode_combo.currentText()
         try:
-            mod_amp = float(self.mod_amp_input.text())
-            mod_freq = float(self.mod_freq_input.text())
-            hue_offset = float(self.hue_offset_input.text())
             min_brightness = float(self.min_brightness_input.text())
         except ValueError:
-            mod_amp, mod_freq, hue_offset, min_brightness = 90, 3, 60, 150  # 기본값
-    
+            min_brightness = 150
+
         max_val = np.max(fractal)
+        if max_val == 0: max_val = 1 # Prevent division by zero
         height, width = fractal.shape
         image = QImage(width, height, QImage.Format.Format_RGB888)
+
+        # Get color parameters only if in color mode
+        if mode == "Color":
+            try:
+                mod_amp = float(self.mod_amp_input.text())
+                mod_freq = float(self.mod_freq_input.text())
+                hue_offset = float(self.hue_offset_input.text())
+            except ValueError:
+                mod_amp, mod_freq, hue_offset = 90, 3, 60
     
         for y in range(height):
             for x in range(width):
                 iter_count = fractal[y, x]
                 if iter_count == 0:
-                    color = (0, 0, 0)  # 수렴하지 않음: 검정
+                    color_val = QColor(0, 0, 0).rgb()
                 else:
-                    # norm = iter_count / max_val
-                    norm = math.log(iter_count) / math.log(max_val)
+                    norm = math.log(iter_count + 1) / math.log(max_val + 1)
                     
-                    # 색상 계산: hue = 기본 + sin 변동 + offset
-                    base_hue = 360 * norm
-                    modulation = mod_amp * math.sin(mod_freq * math.pi * norm)
-                    hue = int((base_hue + modulation + hue_offset) % 360)
-    
-                    # 밝기 계산: norm 작을수록 밝게
-                    value = int(255 * ((1 - norm) ** 0.5))
-                    value = max(min_brightness, min(255, value))
-                    value = int(value)
-    
-                    color = QColor.fromHsv(hue, 255, value).toRgb()
-                    color = (color.red(), color.green(), color.blue())
-    
-                image.setPixel(x, y, QColor(*color).rgb())
+                    if mode == "Color":
+                        base_hue = 360 * norm
+                        modulation = mod_amp * math.sin(mod_freq * math.pi * norm)
+                        hue = int((base_hue + modulation + hue_offset) % 360)
+                        value = max(min_brightness, min(255, 255 * ((1 - norm) ** 0.5)))
+                        color = QColor.fromHsv(hue, 255, int(value))
+                        color_val = color.rgb()
+                    else: # Grayscale
+                        gray_val = max(min_brightness, min(255, 255 * ((1 - norm) ** 0.5)))
+                        color_val = QColor(int(gray_val), int(gray_val), int(gray_val)).rgb()
+
+                image.setPixel(x, y, color_val)
     
         self.current_pixmap = QPixmap.fromImage(image)
         self.scaled_pixmap = self.current_pixmap.scaled(
-            self.image_label.width(), self.image_label.height(),
+            self.image_label.size(),
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.FastTransformation
         )
@@ -369,6 +358,7 @@ class FractalWindow(QMainWindow):
 
     def on_render_finished(self):
         self.is_rendering = False
+        self.plot_button.setEnabled(True)
 
     def save_image(self):
         if not hasattr(self, 'current_pixmap') or self.current_pixmap.isNull():
@@ -376,16 +366,12 @@ class FractalWindow(QMainWindow):
             return
     
         filename, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save Fractal Image",
-            "fractal_snapshot.png",
-            "PNG Files (*.png)"
+            self, "Save Fractal Image", "fractal_snapshot.png", "PNG Files (*.png)"
         )
     
         if filename:
             if not filename.lower().endswith('.png'):
                 filename += '.png'
-    
             if self.current_pixmap.save(filename, "PNG"):
                 self.coord_label.setText(f"Saved: {filename}")
             else:
@@ -395,4 +381,4 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = FractalWindow()
     window.show()
-    sys.exit(app.exec())
+    sys.exit(app.exec()
